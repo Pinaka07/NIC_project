@@ -1,13 +1,14 @@
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 
-BASE_DIR=Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY='django-secret-key'
-DEBUG=True
-ALLOWED_HOSTS=[]
+SECRET_KEY = config('SECRET_KEY', default='change-me-in-production')
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
-INSTALLED_APPS=[
+INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -21,7 +22,7 @@ INSTALLED_APPS=[
     'users',
 ]
 
-MIDDLEWARE=[
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -31,15 +32,15 @@ MIDDLEWARE=[
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF='config.urls'
+ROOT_URLCONF = 'config.urls'
 
-TEMPLATES=[
+TEMPLATES = [
     {
-        'BACKEND':'django.template.backends.django.DjangoTemplates',
-        'DIRS':[],
-        'APP_DIRS':True,
-        'OPTIONS':{
-            'context_processors':[
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -48,34 +49,34 @@ TEMPLATES=[
     },
 ]
 
-WSGI_APPLICATION='config.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES={
-    'default':{
-        'ENGINE':'django.db.backends.postgresql',
-        'NAME':'user_management_db',
-        'USER':'postgres',
-        'PASSWORD':'postgres',
-        'HOST':'localhost',
-        'PORT':'5432',
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME':     config('DB_NAME',     default='user_management_db'),
+        'USER':     config('DB_USER',     default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='postgres'),
+        'HOST':     config('DB_HOST',     default='localhost'),
+        'PORT':     config('DB_PORT',     default='5432'),
     }
 }
 
-AUTH_USER_MODEL='users.User'
+AUTH_USER_MODEL = 'users.User'
 
-REST_FRAMEWORK={
-    'DEFAULT_AUTHENTICATION_CLASSES':(
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
 }
 
-SIMPLE_JWT={
-    'ACCESS_TOKEN_LIFETIME':timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME':timedelta(days=7),
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':  timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
-STATIC_URL='static/'
-MEDIA_URL='/media/'
-MEDIA_ROOT=BASE_DIR/'media'
+STATIC_URL = 'static/'
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
-DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
