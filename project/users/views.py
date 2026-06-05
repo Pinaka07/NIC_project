@@ -17,6 +17,27 @@ from .serializers import (
 )
 
 
+class UserApiRootView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        return Response({
+            'message': 'User management API',
+            'endpoints': {
+                'login': {'method': 'POST', 'url': '/api/users/login/'},
+                'refresh': {'method': 'POST', 'url': '/api/users/refresh/'},
+                'register': {'method': 'POST', 'url': '/api/users/register/'},
+                'list': {'method': 'GET', 'url': '/api/users/list/'},
+                'edit_profile': {'method': 'PATCH', 'url': '/api/users/edit/<user_id>/'},
+                'password_change': {'method': 'POST', 'url': '/api/users/password-change/'},
+                'create_role': {'method': 'POST', 'url': '/api/users/create-role/'},
+                'create_permission': {'method': 'POST', 'url': '/api/users/create-permission/'},
+                'transfer_user': {'method': 'POST', 'url': '/api/users/transfer-user/'},
+                'dashboard': {'method': 'GET', 'url': '/api/users/dashboard/'},
+            },
+        })
+
+
 class RegisterUserView(APIView):
     permission_classes = []
 
