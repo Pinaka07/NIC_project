@@ -1,5 +1,3 @@
-# project/users/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -32,7 +30,6 @@ from .serializers import (
 )
 
 
-# ─── TEMPLATE VIEWS (Session based) ──────────────────────────────────────────
 
 class LoginView(View):
     """
@@ -137,28 +134,12 @@ class RegisterUserView(View):
         return render(request, 'users/register.html', {'form': form})
 
 
+from .utils import get_user_scope
+
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class UserListView(View):
-    """
-    GET /users/list/
-    STATE_ADMIN    → all users
-    DISTRICT_ADMIN → users in own district
-    COMMON_USER    → own profile only
-    """
     def get(self, request):
-        role_name = request.user.get_role_name()
-
-        if role_name == 'STATE_ADMIN':
-            users = User.objects.select_related('role', 'state', 'district').all()
-        elif role_name == 'DISTRICT_ADMIN':
-            users = User.objects.select_related('role', 'state', 'district').filter(
-                district=request.user.district
-            )
-        else:
-            users = User.objects.select_related('role', 'state', 'district').filter(
-                id=request.user.id
-            )
-
+        users = get_user_scope(request.user)
         return render(request, 'users/user_list.html', {'users': users})
 
 
@@ -300,7 +281,6 @@ class PasswordChangeView(View):
         return render(request, 'users/password_change.html', {'form': form})
 
 
-# ─── API VIEWS (kept for future frontend/mobile use) ─────────────────────────
 
 class UserApiRootView(APIView):
     permission_classes = []

@@ -1,24 +1,22 @@
 from django.http import JsonResponse
+from django.shortcuts import redirect
 
-
-ROLE_PROTECTED_URLS = {
-    'STATE_ADMIN': [
-        '/api/users/create-role/',
-        '/api/users/create-permission/',
-        '/api/users/transfer-user/',
-        '/api/users/list/',
-    ],
-    'DISTRICT_ADMIN': [
-        '/api/users/list/',
-    ],
-}
-
+# URLs that anyone can access without login
 PUBLIC_URLS = [
+    '/users/login/',
+    '/users/logout/',
+    '/admin/',
     '/api/users/login/',
     '/api/users/refresh/',
     '/api/users/register/',
     '/api/users/',
-    '/admin/',
+]
+
+# API URLs that need STATE_ADMIN role
+STATE_ADMIN_URLS = [
+    '/api/users/create-role/',
+    '/api/users/create-permission/',
+    '/api/users/transfer-user/',
 ]
 
 
@@ -34,7 +32,13 @@ class RoleMiddleware:
         if any(path.startswith(url) for url in PUBLIC_URLS):
             return self.get_response(request)
 
-        # Check if user is authenticated
+        # For template URLs — redirect to login if not authenticated
+        if not path.startswith('/api/'):
+            if not request.user or not request.user.is_authenticated:
+                return redirect('/users/login/')
+            return self.get_response(request)
+
+        # For API URLs — return JSON error if not authenticated
         if not request.user or not request.user.is_authenticated:
             return JsonResponse(
                 {'error': 'Authentication required. Please login.'},
@@ -44,19 +48,9 @@ class RoleMiddleware:
         # Get user role safely
         role_name = request.user.role.name if request.user.role else None
 
-        if role_name is None:
-            return JsonResponse(
-                {'error': 'No role assigned. Contact your administrator.'},
-                status=403
-            )
-
-        # Check STATE_ADMIN only URLs
-        state_admin_urls = ROLE_PROTECTED_URLS['STATE_ADMIN']
-        if any(path.startswith(url) for url in state_admin_urls):
-            if role_name not in ('STATE_ADMIN',):
-                # District admin can access list only
-                if path.startswith('/api/users/list/') and role_name == 'DISTRICT_ADMIN':
-                    return self.get_response(request)
+        # Check STATE_ADMIN only API URLs
+        if any(path.startswith(url) for url in STATE_ADMIN_URLS):
+            if role_name != 'STATE_ADMIN':
                 return JsonResponse(
                     {'error': 'Only State Admin can perform this action.'},
                     status=403
