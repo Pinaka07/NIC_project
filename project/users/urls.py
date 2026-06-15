@@ -1,38 +1,39 @@
+# project/users/urls.py
+
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .views import (
-    UserApiRootView,
+    # Template views
+    LoginView,
+    LogoutView,
+    DashboardView,
     RegisterUserView,
     UserListView,
     EditUserProfileView,
-    CreatePermissionView,
-    CreateRoleView,
     TransferUserView,
-    DashboardView,
+    CreateRoleView,
     PasswordChangeView,
+
+    # API root
+    UserApiRootView,
 )
 
 urlpatterns = [
-    path('', UserApiRootView.as_view(), name='user_api_root'),
 
-    # Auth
-    path('login/',   TokenObtainPairView.as_view(), name='token_obtain'),
-    path('refresh/', TokenRefreshView.as_view(),    name='token_refresh'),
+    # ── Template URLs (session based) ────────────────────────────────────────
+    path('login/',           LoginView.as_view(),          name='login'),
+    path('logout/',          LogoutView.as_view(),         name='logout'),
+    path('dashboard/',       DashboardView.as_view(),      name='dashboard'),
+    path('register/',        RegisterUserView.as_view(),   name='register'),
+    path('list/',            UserListView.as_view(),       name='user_list'),
+    path('edit/<int:pk>/',   EditUserProfileView.as_view(), name='edit_profile'),
+    path('transfer/',        TransferUserView.as_view(),   name='transfer_user'),
+    path('create-role/',     CreateRoleView.as_view(),     name='create_role'),
+    path('password-change/', PasswordChangeView.as_view(), name='password_change'),
 
-    # User management
-    path('register/',         RegisterUserView.as_view(),    name='register'),
-    path('list/',             UserListView.as_view(),         name='user_list'),
-    path('edit/<int:pk>/',    EditUserProfileView.as_view(),  name='edit_profile'),
-    path('password-change/',  PasswordChangeView.as_view(),   name='password_change'),
-
-    # Role & permission management (STATE_ADMIN only)
-    path('create-role/',       CreateRoleView.as_view(),       name='create_role'),
-    path('create-permission/', CreatePermissionView.as_view(), name='create_permission'),
-
-    # Transfer (STATE_ADMIN only)
-    path('transfer-user/', TransferUserView.as_view(), name='transfer_user'),
-
-    # Dashboard
-    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    # ── API URLs (JWT based — for future use) ─────────────────────────────────
+    path('api/',      UserApiRootView.as_view(),    name='api_root'),
+    path('api/login/', TokenObtainPairView.as_view(), name='api_login'),
+    path('api/refresh/', TokenRefreshView.as_view(),  name='api_refresh'),
 ]

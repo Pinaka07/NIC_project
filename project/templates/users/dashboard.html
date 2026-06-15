@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - NIC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<nav class="navbar navbar-dark bg-primary px-3">
+    <span class="navbar-brand">NIC Project</span>
+    <div>
+        <span class="text-white me-3">{{ request.user.username }} ({{ role }})</span>
+        <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Logout</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-info">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <h4>Dashboard</h4>
+    <div class="row mt-3">
+
+        {% if role == 'STATE_ADMIN' %}
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5>Total Users</h5>
+                    <h2>{{ total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5>District Admins</h5>
+                    <h2>{{ district_admins }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5>Common Users</h5>
+                    <h2>{{ common_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5>Total Districts</h5>
+                    <h2>{{ total_districts }}</h2>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if role == 'DISTRICT_ADMIN' %}
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5>District</h5>
+                    <h4>{{ district }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5>District Users</h5>
+                    <h2>{{ district_users }}</h2>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'user_list' %}" class="btn btn-primary me-2">User List</a>
+        {% if role == 'STATE_ADMIN' %}
+        <a href="{% url 'register' %}" class="btn btn-success me-2">Register User</a>
+        <a href="{% url 'transfer_user' %}" class="btn btn-warning me-2">Transfer User</a>
+        <a href="{% url 'create_role' %}" class="btn btn-info me-2">Create Role</a>
+        {% endif %}
+        <a href="{% url 'password_change' %}" class="btn btn-secondary">Change Password</a>
+    </div>
+</div>
+</body>
+</html>
