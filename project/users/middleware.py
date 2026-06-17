@@ -1,3 +1,5 @@
+# project/users/middleware.py
+
 from django.http import JsonResponse
 from django.shortcuts import redirect
 
@@ -9,7 +11,9 @@ PUBLIC_URLS = [
     '/api/users/login/',
     '/api/users/refresh/',
     '/api/users/register/',
-    '/api/users/',
+    '/api/users/api/',
+    '/static/',
+    '/media/',
 ]
 
 # API URLs that need STATE_ADMIN role
@@ -32,14 +36,14 @@ class RoleMiddleware:
         if any(path.startswith(url) for url in PUBLIC_URLS):
             return self.get_response(request)
 
-        # For template URLs — redirect to login if not authenticated
+        # For template URLs redirect to login if not authenticated
         if not path.startswith('/api/'):
-            if not request.user or not request.user.is_authenticated:
+            if not request.user.is_authenticated:
                 return redirect('/users/login/')
             return self.get_response(request)
 
-        # For API URLs — return JSON error if not authenticated
-        if not request.user or not request.user.is_authenticated:
+        # For API URLs return JSON error if not authenticated
+        if not request.user.is_authenticated:
             return JsonResponse(
                 {'error': 'Authentication required. Please login.'},
                 status=401

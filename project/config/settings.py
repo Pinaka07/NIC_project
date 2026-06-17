@@ -16,7 +16,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
+    'django.contrib.sessions',       
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
@@ -32,10 +32,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-    # Custom role-based access middleware
-    # Replaces permission_classes in individual views
-    'users.middleware.RoleMiddleware',
+    # 'users.middleware.RoleMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
