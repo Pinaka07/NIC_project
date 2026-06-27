@@ -1,3 +1,5 @@
+# project/users/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -8,9 +10,9 @@ from django.views import View
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 
 from .models import User, Role, Permission, District, UserTransfer
+from .utils import get_user_scope
 from .forms import (
     UserLoginForm,
     UserRegistrationForm,
@@ -19,23 +21,9 @@ from .forms import (
     PasswordChangeForm,
     RoleForm,
 )
-from .serializers import (
-    RegisterSerializer,
-    UserSerializer,
-    EditProfileSerializer,
-    RoleSerializer,
-    PermissionSerializer,
-    UserTransferSerializer,
-    PasswordChangeSerializer,
-)
-
 
 
 class LoginView(View):
-    """
-    GET  /users/login/ → show login form
-    POST /users/login/ → authenticate and login
-    """
     def get(self, request):
         if request.user.is_authenticated:
             return redirect('dashboard')
@@ -58,10 +46,7 @@ class LoginView(View):
 
 
 class LogoutView(View):
-    """
-    POST /users/logout/ → logout and redirect to login
-    """
-    def get(self, request):
+    def post(self, request):
         logout(request)
         messages.success(request, 'You have been logged out.')
         return redirect('login')
@@ -69,14 +54,11 @@ class LogoutView(View):
 
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class DashboardView(View):
-    """
-    GET /users/dashboard/
-    Shows role-based dashboard.
-    """
     def get(self, request):
         role_name = request.user.get_role_name()
 
         if role_name is None:
+            logout(request)
             messages.error(request, 'No role assigned. Contact your administrator.')
             return redirect('login')
 
@@ -89,15 +71,17 @@ class DashboardView(View):
                 'total_districts': District.objects.count(),
             }
         elif role_name == 'DISTRICT_ADMIN':
+            district_users = (
+                User.objects.filter(district_id=request.user.district_id)
+                if request.user.district_id is not None
+                else User.objects.none()
+            )
             context = {
                 'role':            'DISTRICT_ADMIN',
                 'district':        request.user.district,
                 'state':           request.user.state,
-                'district_users':  User.objects.filter(district=request.user.district).count(),
-                'common_users':    User.objects.filter(
-                    district=request.user.district,
-                    role__name='COMMON_USER'
-                ).count(),
+                'district_users':  district_users.count(),
+                'common_users':    district_users.filter(role__name='COMMON_USER').count(),
             }
         else:
             context = {
@@ -110,11 +94,6 @@ class DashboardView(View):
 
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class RegisterUserView(View):
-    """
-    GET  /users/register/ → show registration form
-    POST /users/register/ → save new user
-    Only STATE_ADMIN can register new users.
-    """
     def get(self, request):
         if request.user.get_role_name() != 'STATE_ADMIN':
             messages.error(request, 'Only State Admin can register new users.')
@@ -134,24 +113,30 @@ class RegisterUserView(View):
         return render(request, 'users/register.html', {'form': form})
 
 
-from .utils import get_user_scope
-
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class UserListView(View):
+    """
+    GET /users/list/
+    STATE_ADMIN    -> all users
+    DISTRICT_ADMIN -> users in own district
+    COMMON_USER    -> own profile only
+    Supports ?search=username filtering.
+    """
     def get(self, request):
         users = get_user_scope(request.user)
-        return render(request, 'users/user_list.html', {'users': users})
+        search = request.GET.get('search', '')
+        if search:
+            users = users.filter(username__icontains=search)
+        return render(request, 'users/user_list.html', {'users': users, 'search': search})
 
 
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class EditUserProfileView(View):
-    """
-    GET  /users/edit/<pk>/ → show edit form
-    POST /users/edit/<pk>/ → save changes
-    """
     def get(self, request, pk):
         user = get_object_or_404(User, id=pk)
-        self._check_access(request, pk)
+        if not self._check_access(request, pk):
+            messages.error(request, 'You do not have permission to edit this user.')
+            return redirect('dashboard')
         form = EditProfileForm(instance=user)
         return render(request, 'users/edit_profile.html', {'form': form, 'edit_user': user})
 
@@ -174,17 +159,18 @@ class EditUserProfileView(View):
         if role_name == 'STATE_ADMIN':
             return True
         if role_name == 'DISTRICT_ADMIN':
-            return User.objects.filter(id=pk, district=request.user.district).exists()
+            return (
+                request.user.district_id is not None
+                and User.objects.filter(
+                    id=pk,
+                    district_id=request.user.district_id,
+                ).exists()
+            )
         return False
 
 
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class TransferUserView(View):
-    """
-    GET  /users/transfer/ → show transfer form
-    POST /users/transfer/ → perform transfer
-    Only STATE_ADMIN can transfer users.
-    """
     def get(self, request):
         if request.user.get_role_name() != 'STATE_ADMIN':
             messages.error(request, 'Only State Admin can transfer users.')
@@ -200,7 +186,7 @@ class TransferUserView(View):
 
         form = UserTransferForm(request.POST)
         if form.is_valid():
-            user_id    = form.cleaned_data['user_id']
+            user_id     = form.cleaned_data['user_id']
             to_district = form.cleaned_data['district']
 
             try:
@@ -232,12 +218,37 @@ class TransferUserView(View):
 
 
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
+class TransferHistoryView(View):
+    """STATE_ADMIN can view all user transfer records."""
+    def get(self, request):
+        if request.user.get_role_name() != 'STATE_ADMIN':
+            messages.error(request, 'Only State Admin can view transfer history.')
+            return redirect('dashboard')
+        transfers = UserTransfer.objects.select_related(
+            'user', 'from_district', 'to_district', 'transferred_by'
+        ).order_by('-transferred_at')
+        return render(request, 'users/transfer_history.html', {'transfers': transfers})
+
+
+@method_decorator(login_required(login_url='/users/login/'), name='dispatch')
+class ToggleUserActiveView(View):
+    """STATE_ADMIN can activate/deactivate a user instead of deleting."""
+    def post(self, request, pk):
+        if request.user.get_role_name() != 'STATE_ADMIN':
+            messages.error(request, 'Only State Admin can perform this action.')
+            return redirect('user_list')
+        user = get_object_or_404(User, id=pk)
+        if user == request.user:
+            messages.error(request, 'You cannot deactivate your own account.')
+            return redirect('user_list')
+        user.is_active = not user.is_active
+        user.save(update_fields=['is_active'])
+        messages.success(request, f'{user.username} is now {"active" if user.is_active else "inactive"}.')
+        return redirect('user_list')
+
+
+@method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class CreateRoleView(View):
-    """
-    GET  /users/create-role/ → show role form
-    POST /users/create-role/ → save role with permissions
-    Only STATE_ADMIN can create roles.
-    """
     def get(self, request):
         if request.user.get_role_name() != 'STATE_ADMIN':
             messages.error(request, 'Only State Admin can create roles.')
@@ -259,10 +270,6 @@ class CreateRoleView(View):
 
 @method_decorator(login_required(login_url='/users/login/'), name='dispatch')
 class PasswordChangeView(View):
-    """
-    GET  /users/password-change/ → show form
-    POST /users/password-change/ → change password
-    """
     def get(self, request):
         form = PasswordChangeForm()
         return render(request, 'users/password_change.html', {'form': form})
@@ -281,7 +288,6 @@ class PasswordChangeView(View):
         return render(request, 'users/password_change.html', {'form': form})
 
 
-
 class UserApiRootView(APIView):
     permission_classes = []
 
@@ -289,13 +295,7 @@ class UserApiRootView(APIView):
         return Response({
             'message': 'NIC User Management API',
             'endpoints': {
-                'login':             '/api/users/login/',
-                'register':          '/api/users/register/',
-                'list_users':        '/api/users/list/',
-                'dashboard':         '/api/users/dashboard/',
-                'edit_profile':      '/api/users/edit/<id>/',
-                'transfer_user':     '/api/users/transfer-user/',
-                'create_role':       '/api/users/create-role/',
-                'password_change':   '/api/users/password-change/',
+                'token_login':   '/users/api/login/',
+                'token_refresh': '/users/api/refresh/',
             },
         })

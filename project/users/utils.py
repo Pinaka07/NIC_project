@@ -5,8 +5,10 @@ def get_user_scope(user):
     if role == 'STATE_ADMIN':
         return User.objects.select_related('role', 'state', 'district').all()
     elif role == 'DISTRICT_ADMIN':
+        if user.district_id is None:
+            return User.objects.none()
         return User.objects.select_related('role', 'state', 'district').filter(
-            district=user.district
+            district_id=user.district_id
         )
     else:
         return User.objects.select_related('role', 'state', 'district').filter(

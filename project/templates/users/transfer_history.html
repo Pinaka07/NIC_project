@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Transfer History{% endblock %}
+{% block content %}
+<h4>Transfer History</h4>
+<table class="table table-bordered mt-3">
+    <thead class="table-primary">
+        <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>From District</th>
+            <th>To District</th>
+            <th>Transferred By</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in transfers %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ t.user.username }}</td>
+            <td>{{ t.from_district|default:"Not Assigned" }}</td>
+            <td>{{ t.to_district }}</td>
+            <td>{{ t.transferred_by.username }}</td>
+            <td>{{ t.transferred_at|date:"d M Y, h:i A" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center">No transfers yet.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

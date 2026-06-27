@@ -1,6 +1,6 @@
-# project/users/forms.py
-
 from django import forms
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from .models import User, Role, District, State
 
 
@@ -55,6 +55,16 @@ class UserRegistrationForm(forms.ModelForm):
         password_confirm = cleaned_data.get('password_confirm')
         if password and password_confirm and password != password_confirm:
             raise forms.ValidationError('Passwords do not match.')
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as errors:
+                self.add_error('password', errors)
+
+        state = cleaned_data.get('state')
+        district = cleaned_data.get('district')
+        if state and district and district.state_id != state.id:
+            self.add_error('district', 'The selected district does not belong to the selected state.')
         return cleaned_data
 
     def save(self, commit=True):
@@ -118,6 +128,11 @@ class PasswordChangeForm(forms.Form):
         new_password_confirm = cleaned_data.get('new_password_confirm')
         if new_password and new_password_confirm and new_password != new_password_confirm:
             raise forms.ValidationError('New passwords do not match.')
+        if new_password:
+            try:
+                validate_password(new_password)
+            except ValidationError as errors:
+                self.add_error('new_password', errors)
         return cleaned_data
 
 
